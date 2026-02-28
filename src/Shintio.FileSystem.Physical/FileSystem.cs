@@ -44,7 +44,7 @@ public class FileSystem : IFileSystem
 		return Task.CompletedTask;
 	}
 
-	public Task CopyAsync(string from, string to, CancellationToken cancellationToken = default)
+	public async Task CopyAsync(string from, string to, CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -53,14 +53,12 @@ public class FileSystem : IFileSystem
 
 		if (File.Exists(from))
 		{
-			CopyFile(from, to);
+			await CopyFileAsync(from, to, cancellationToken);
 		}
 		else if (Directory.Exists(from))
 		{
-			CopyDirectory(from, to);
+			await CopyDirectoryAsync(from, to, cancellationToken);
 		}
-
-		return Task.CompletedTask;
 	}
 
 	public Task MoveAsync(string from, string to, CancellationToken cancellationToken = default)
@@ -114,7 +112,7 @@ public class FileSystem : IFileSystem
 		return Task.CompletedTask;
 	}
 
-	public Task CopyAllFilesAsync(string from, string to, CancellationToken cancellationToken = default)
+	public async Task CopyAllFilesAsync(string from, string to, CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -123,7 +121,7 @@ public class FileSystem : IFileSystem
 
 		if (!Directory.Exists(from))
 		{
-			return Task.CompletedTask;
+			return;
 		}
 
 		foreach (var filePath in Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories))
@@ -134,10 +132,8 @@ public class FileSystem : IFileSystem
 			var toPath = Path.Combine(to, fromPath);
 
 			TryCreateDirectoryForFile(toPath);
-			File.Copy(filePath, toPath, true);
+			await CopyFileContentsAsync(filePath, toPath, cancellationToken);
 		}
-
-		return Task.CompletedTask;
 	}
 
 	public Task CreateFileAsync(string path, byte[] content, CancellationToken cancellationToken = default)
@@ -154,44 +150,71 @@ public class FileSystem : IFileSystem
 	public Task<byte[]> ReadFileAsync(string path, CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		
+
 		path = Path.GetFullPath(path);
 
 		return File.ReadAllBytesAsync(path, cancellationToken);
 	}
 
-	private static void CopyFile(string from, string to)
+	private static async Task CopyFileAsync(string from, string to, CancellationToken cancellationToken)
 	{
 		if (Directory.Exists(to) || EndsWithDirectorySeparator(to))
 		{
 			Directory.CreateDirectory(to);
 			var newFile = Path.Combine(to, Path.GetFileName(from));
 
-			File.Copy(from, newFile, overwrite: true);
+			await CopyFileContentsAsync(from, newFile, cancellationToken);
 
 			return;
 		}
 
 		TryCreateDirectoryForFile(to);
 
-		File.Copy(from, to, overwrite: true);
+		await CopyFileContentsAsync(from, to, cancellationToken);
 	}
 
-	private static void CopyDirectory(string from, string to)
+	private static async Task CopyDirectoryAsync(string from, string to, CancellationToken cancellationToken)
 	{
 		Directory.CreateDirectory(to);
 
 		foreach (var file in Directory.EnumerateFiles(from))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
+
 			var destFile = Path.Combine(to, Path.GetFileName(file));
-			File.Copy(file, destFile, overwrite: true);
+			await CopyFileContentsAsync(file, destFile, cancellationToken);
 		}
 
 		foreach (var subDir in Directory.EnumerateDirectories(from))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
+
 			var destSubDir = Path.Combine(to, Path.GetFileName(subDir));
-			CopyDirectory(subDir, destSubDir);
+			await CopyDirectoryAsync(subDir, destSubDir, cancellationToken);
 		}
+	}
+
+	private static async Task CopyFileContentsAsync(string from, string to, CancellationToken cancellationToken)
+	{
+		await using var sourceStream = new FileStream(
+			from,
+			FileMode.Open,
+			FileAccess.Read,
+			FileShare.Read,
+			bufferSize: 81920,
+			options: FileOptions.Asynchronous | FileOptions.SequentialScan
+		);
+
+		await using var destinationStream = new FileStream(
+			to,
+			FileMode.Create,
+			FileAccess.Write,
+			FileShare.None,
+			bufferSize: 81920,
+			options: FileOptions.Asynchronous
+		);
+
+		await sourceStream.CopyToAsync(destinationStream, 81920, cancellationToken);
 	}
 
 	private static void MoveFile(string from, string to)
