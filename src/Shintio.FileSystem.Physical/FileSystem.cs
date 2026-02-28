@@ -1,4 +1,7 @@
-﻿using Shintio.FileSystem.Abstractions;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using Shintio.FileSystem.Abstractions;
 
 namespace Shintio.FileSystem.Physical;
 
@@ -14,15 +17,19 @@ public class FileSystem : IFileSystem
 		return Path.Combine(parts);
 	}
 
-	public bool Exists(string path)
+	public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		path = Path.GetFullPath(path);
 
-		return File.Exists(path) || Directory.Exists(path);
+		return Task.FromResult(File.Exists(path) || Directory.Exists(path));
 	}
 
-	public void Delete(string path)
+	public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		path = Path.GetFullPath(path);
 
 		if (File.Exists(path))
@@ -33,10 +40,14 @@ public class FileSystem : IFileSystem
 		{
 			Directory.Delete(path, true);
 		}
+
+		return Task.CompletedTask;
 	}
 
-	public void Copy(string from, string to)
+	public Task CopyAsync(string from, string to, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		from = Path.GetFullPath(from);
 		to = Path.GetFullPath(to);
 
@@ -48,10 +59,14 @@ public class FileSystem : IFileSystem
 		{
 			CopyDirectory(from, to);
 		}
+
+		return Task.CompletedTask;
 	}
 
-	public void Move(string from, string to)
+	public Task MoveAsync(string from, string to, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		from = Path.GetFullPath(from);
 		to = Path.GetFullPath(to);
 
@@ -63,10 +78,14 @@ public class FileSystem : IFileSystem
 		{
 			MoveDirectory(from, to);
 		}
+
+		return Task.CompletedTask;
 	}
 
-	public void Rename(string from, string newName)
+	public Task RenameAsync(string from, string newName, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		from = Path.GetFullPath(from);
 
 		var directoryName = Path.GetDirectoryName(from);
@@ -80,49 +99,65 @@ public class FileSystem : IFileSystem
 		{
 			Directory.Move(from, to);
 		}
+
+		return Task.CompletedTask;
 	}
 
-	public void CreateDirectory(string path)
+	public Task CreateDirectoryAsync(string path, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		path = Path.GetFullPath(path);
 
 		Directory.CreateDirectory(path);
+
+		return Task.CompletedTask;
 	}
 
-	public void CopyAllFiles(string from, string to)
+	public Task CopyAllFilesAsync(string from, string to, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		from = Path.GetFullPath(from);
 		to = Path.GetFullPath(to);
 
 		if (!Directory.Exists(from))
 		{
-			return;
+			return Task.CompletedTask;
 		}
 
 		foreach (var filePath in Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
+
 			var fromPath = Path.GetRelativePath(from, filePath);
 			var toPath = Path.Combine(to, fromPath);
 
 			TryCreateDirectoryForFile(toPath);
 			File.Copy(filePath, toPath, true);
 		}
+
+		return Task.CompletedTask;
 	}
 
-	public void CreateFile(string path, byte[] content)
+	public Task CreateFileAsync(string path, byte[] content, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		path = Path.GetFullPath(path);
 
 		TryCreateDirectoryForFile(path);
 
-		File.WriteAllBytes(path, content);
+		return File.WriteAllBytesAsync(path, content, cancellationToken);
 	}
 
-	public byte[] ReadFile(string path)
+	public Task<byte[]> ReadFileAsync(string path, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+		
 		path = Path.GetFullPath(path);
 
-		return File.ReadAllBytes(path);
+		return File.ReadAllBytesAsync(path, cancellationToken);
 	}
 
 	private static void CopyFile(string from, string to)

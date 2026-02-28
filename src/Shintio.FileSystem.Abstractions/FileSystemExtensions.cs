@@ -1,4 +1,6 @@
-﻿using System.Text;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Shintio.FileSystem.Abstractions;
 
@@ -6,14 +8,15 @@ public static class FileSystemExtensions
 {
 	extension(IFileSystem fileSystem)
 	{
-		public void CreateFile(string path, string content)
+		public Task CreateFileAsync(string path, string content, CancellationToken cancellationToken = default)
 		{
-			fileSystem.CreateFile(path, Encoding.UTF8.GetBytes(content));
+			return fileSystem.CreateFileAsync(path, Encoding.UTF8.GetBytes(content), cancellationToken);
 		}
 
-		public string ReadFileText(string path)
+		public async Task<string> ReadFileTextAsync(string path, CancellationToken cancellationToken = default)
 		{
-			return Encoding.UTF8.GetString(fileSystem.ReadFile(path));
+			var bytes = await fileSystem.ReadFileAsync(path, cancellationToken);
+			return Encoding.UTF8.GetString(bytes);
 		}
 	}
 }

@@ -1,4 +1,8 @@
-﻿using Shintio.FileSystem.Abstractions;
+﻿using System;
+using System.IO;
+using Shintio.FileSystem.Abstractions;
+using Shintio.FileSystem.Abstractions.Sync;
+using Xunit;
 
 namespace Shintio.FileSystem.Tests;
 
