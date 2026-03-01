@@ -4,6 +4,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Shintio.FileSystem.Abstractions/Shintio.FileSystem.Abstractions.csproj" />
+    <Project Path="src/Shintio.FileSystem.GoogleDrive/Shintio.FileSystem.GoogleDrive.csproj" />
     <Project Path="src/Shintio.FileSystem.Physical/Shintio.FileSystem.Physical.csproj" />
   </Folder>
   <Folder Name="/tests/">
