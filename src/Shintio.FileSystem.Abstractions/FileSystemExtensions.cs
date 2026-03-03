@@ -8,6 +8,11 @@ public static class FileSystemExtensions
 {
 	extension(IFileSystem fileSystem)
 	{
+		public string GetFullCombinedPath(params string[] parts)
+		{
+			return fileSystem.GetFullPath(fileSystem.Combine(parts));
+		}
+
 		public Task CreateFileAsync(string path, string content, CancellationToken cancellationToken = default)
 		{
 			return fileSystem.CreateFileAsync(path, Encoding.UTF8.GetBytes(content), cancellationToken);
